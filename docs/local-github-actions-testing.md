@@ -171,7 +171,7 @@ act -s GITHUB_TOKEN=xxx                # Set individual secret
 ### ⚠️ What Has Limitations:
 - GitHub Actions marketplace actions
 - Service containers (postgres, redis, etc.)
-- Complex networking between containers  
+- Complex networking between containers
 - Actions requiring GitHub API access
 - Matrix builds with external dependencies
 
