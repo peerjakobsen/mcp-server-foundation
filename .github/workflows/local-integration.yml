@@ -47,7 +47,7 @@ jobs:
         EOF
 
         # Start services
-        docker-compose -f docker-compose-minimal.yml up -d
+        docker compose -f docker-compose-minimal.yml up -d
 
     - name: Wait for services
       run: |
@@ -117,7 +117,7 @@ jobs:
     - name: Cleanup services
       if: always()
       run: |
-        docker-compose -f docker-compose-minimal.yml down || true
+        docker compose -f docker-compose-minimal.yml down || true
         docker system prune -f || true
 
   test-without-services:

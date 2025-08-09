@@ -56,15 +56,15 @@ Jobs requiring PostgreSQL/Redis services have limitations:
 
 **act Limitations:**
 - Service containers not fully supported
-- `docker-compose` command not available in containers
+- `docker compose` command not available in containers
 - External service dependencies difficult to manage
 
 **Workaround Solution:**
-Use docker-compose separately to provide services:
+Use docker compose separately to provide services:
 
 ```bash
 # 1. Start services manually
-docker-compose -f docker-compose.test.yml up -d postgres-test redis-test
+docker compose -f docker-compose.test.yml up -d postgres-test redis-test
 
 # 2. Run tests with service connections
 ./scripts/test-with-services.sh
@@ -114,10 +114,10 @@ services:
     image: postgres:17
     # ... service configuration
 
-# Use docker-compose with health checks:
+# Use docker compose with health checks:
 - name: Start services externally
   run: |
-    docker-compose -f docker-compose.test.yml up -d
+    docker compose -f docker-compose.test.yml up -d
     # Wait for health checks
 ```
 
@@ -214,10 +214,10 @@ act -s GITHUB_TOKEN=xxx                # Set individual secret
 
 ## Conclusion
 
-act provides excellent local testing for straightforward CI/CD workflows but requires workarounds for complex service dependencies. The combination of act + docker-compose provides a comprehensive local testing solution that covers most GitHub Actions use cases.
+act provides excellent local testing for straightforward CI/CD workflows but requires workarounds for complex service dependencies. The combination of act + docker compose provides a comprehensive local testing solution that covers most GitHub Actions use cases.
 
 For this MCP server foundation project:
 - ✅ Basic testing, linting, and code quality work perfectly with act
-- ✅ Integration testing works with docker-compose services
+- ✅ Integration testing works with docker compose services
 - ✅ Full local CI/CD pipeline testing is achievable
 - ⚠️ Some manual service management required for complex scenarios
