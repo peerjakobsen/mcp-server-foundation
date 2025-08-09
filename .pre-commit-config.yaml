@@ -45,12 +45,11 @@ repos:
         language: system
         files: ^src/.*\.py$
         pass_filenames: false
-      # TODO: Re-enable safety scan when authentication is configured
-      # - id: safety-check
-      #   name: safety vulnerability scan
-      #   entry: uv run safety scan --output json --short-report
-      #   language: system
-      #   pass_filenames: false
+      - id: safety-check
+        name: safety vulnerability scan
+        entry: uv run safety --stage cicd scan --output json --short-report
+        language: system
+        pass_filenames: false
 
   # YAML, JSON, and TOML validation
   - repo: https://github.com/adrienverge/yamllint

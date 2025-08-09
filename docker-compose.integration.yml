@@ -1,0 +1,94 @@
+# Docker Compose configuration for integration testing
+# Simplified setup without persistent volumes and development-specific configurations
+
+services:
+  # Main MCP Server application (for testing)
+  mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+      args:
+        PYTHON_VERSION: '3.13.6'
+    container_name: mcp-server-integration-test
+    ports:
+      - '8000:8000'
+    environment:
+      # Application configuration
+      - DEPLOYMENT_MODE=development
+      - SECRET_KEY=integration-test-secret-key
+      - DEBUG=true
+      - RELOAD=false  # Disable reload for testing stability
+
+      # Database configuration
+      - DATABASE_URL=postgresql://testuser:testpass@postgres:5432/testdb
+
+      # Redis configuration (optional for tests)
+      - REDIS_URL=redis://redis:6379/0
+
+      # Storage configuration
+      - STORAGE_BACKEND=local
+      - STORAGE_LOCAL_PATH=/tmp/storage
+
+      # Python configuration
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - test-network
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8000/health']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    # Remove persistent volumes for testing
+    tmpfs:
+      - /tmp/storage
+
+  # PostgreSQL database for integration tests
+  postgres:
+    image: postgres:17-alpine
+    container_name: postgres-integration-test
+    ports:
+      - '5432:5432'
+    environment:
+      - POSTGRES_USER=testuser
+      - POSTGRES_PASSWORD=testpass
+      - POSTGRES_DB=testdb
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8
+    networks:
+      - test-network
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U testuser -d testdb']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    # Use tmpfs for test database (no persistence needed)
+    tmpfs:
+      - /var/lib/postgresql/data
+
+  # Redis cache for integration tests
+  redis:
+    image: redis:7-alpine
+    container_name: redis-integration-test
+    ports:
+      - '6379:6379'
+    command: redis-server --maxmemory 64mb --maxmemory-policy allkeys-lru
+    networks:
+      - test-network
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 2s
+      retries: 5
+    # Use tmpfs for test data (no persistence needed)
+    tmpfs:
+      - /data
+
+networks:
+  test-network:
+    driver: bridge

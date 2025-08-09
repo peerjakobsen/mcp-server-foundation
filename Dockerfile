@@ -117,6 +117,11 @@ RUN find /app -type f -name "*.pyc" -delete && \
 # ============================================================================
 FROM python:${PYTHON_VERSION}-slim AS production
 
+# Install minimal runtime dependencies for health checks
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
 # Create non-root user for security
 RUN groupadd -g 1000 mcp && \
     useradd -r -u 1000 -g mcp -m -s /sbin/nologin mcp
