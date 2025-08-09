@@ -178,7 +178,7 @@ def register_health_endpoints(
     """
     manager = HealthCheckManager(app, config)
 
-    # Register health check as a tool that can be called via HTTP
+    # Register MCP tools (for MCP protocol clients)
     @app.tool  # type: ignore[misc]
     async def health() -> dict[str, Any]:
         """Health check endpoint for Docker/Kubernetes.
@@ -205,5 +205,51 @@ def register_health_endpoints(
             Liveness status
         """
         return await manager.liveness_check()
+
+    # Register HTTP endpoints (for Docker health checks and monitoring)
+    @app.custom_route("/health", methods=["GET"])  # type: ignore[misc]
+    async def health_http_endpoint(request: Any) -> Any:  # noqa: ARG001
+        """HTTP health check endpoint for Docker/Kubernetes health checks.
+
+        Args:
+            request: HTTP request object (unused)
+
+        Returns:
+            JSONResponse with health status information
+        """
+        from starlette.responses import JSONResponse
+
+        health_data = await manager.health_check()
+        return JSONResponse(health_data)
+
+    @app.custom_route("/readiness", methods=["GET"])  # type: ignore[misc]
+    async def readiness_http_endpoint(request: Any) -> Any:  # noqa: ARG001
+        """HTTP readiness check endpoint for load balancers.
+
+        Args:
+            request: HTTP request object (unused)
+
+        Returns:
+            JSONResponse with readiness status and component health
+        """
+        from starlette.responses import JSONResponse
+
+        readiness_data = await manager.readiness_check()
+        return JSONResponse(readiness_data)
+
+    @app.custom_route("/liveness", methods=["GET"])  # type: ignore[misc]
+    async def liveness_http_endpoint(request: Any) -> Any:  # noqa: ARG001
+        """HTTP liveness check endpoint to detect hung processes.
+
+        Args:
+            request: HTTP request object (unused)
+
+        Returns:
+            JSONResponse with liveness status
+        """
+        from starlette.responses import JSONResponse
+
+        liveness_data = await manager.liveness_check()
+        return JSONResponse(liveness_data)
 
     return manager
