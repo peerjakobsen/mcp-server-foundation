@@ -1,0 +1,167 @@
+name: Local Integration Testing
+
+on:
+  workflow_dispatch:
+  push:
+
+jobs:
+  integration-with-services:
+    name: Integration Tests with Services
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check Docker availability
+      run: |
+        docker --version
+        docker-compose --version || docker compose version
+
+    - name: Start test services
+      run: |
+        # Create a minimal docker-compose for testing
+        cat > docker-compose-minimal.yml << EOF
+        services:
+          postgres-test:
+            image: postgres:17-alpine
+            ports:
+              - "5432:5432"
+            environment:
+              POSTGRES_USER: testuser
+              POSTGRES_PASSWORD: testpass
+              POSTGRES_DB: testdb
+            healthcheck:
+              test: ["CMD-SHELL", "pg_isready -U testuser -d testdb"]
+              interval: 10s
+              timeout: 5s
+              retries: 5
+
+          redis-test:
+            image: redis:7-alpine
+            ports:
+              - "6379:6379"
+            healthcheck:
+              test: ["CMD", "redis-cli", "ping"]
+              interval: 10s
+              timeout: 3s
+              retries: 3
+        EOF
+
+        # Start services
+        docker compose -f docker-compose-minimal.yml up -d
+
+    - name: Wait for services
+      run: |
+        echo "Waiting for services to become healthy..."
+        
+        # Wait for PostgreSQL to be healthy
+        echo "Checking PostgreSQL health..."
+        timeout 120 bash -c 'until docker compose -f docker-compose-minimal.yml ps postgres-test | grep -q "healthy"; do sleep 2; done'
+        
+        # Wait for Redis to be healthy  
+        echo "Checking Redis health..."
+        timeout 60 bash -c 'until docker compose -f docker-compose-minimal.yml ps redis-test | grep -q "healthy"; do sleep 2; done'
+
+    - name: Verify service connections
+      run: |
+        # Show service status
+        docker compose -f docker-compose-minimal.yml ps
+        
+        # Test PostgreSQL connection
+        docker run --rm --network host -e PGPASSWORD=testpass postgres:17-alpine \
+          psql -h localhost -U testuser -d testdb -c "SELECT 1;"
+
+        # Test Redis connection
+        docker run --rm --network host redis:7-alpine \
+          redis-cli -h localhost ping
+
+    - name: Install uv manually
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+    - name: Run integration tests
+      env:
+        DATABASE_URL: postgresql://testuser:testpass@localhost:5432/testdb
+        REDIS_URL: redis://localhost:6379/0
+        DEPLOYMENT_MODE: docker
+        SECRET_KEY: test-secret-key
+      run: |
+        export PATH="$HOME/.cargo/bin:$PATH"
+
+        # Create a simple integration test
+        mkdir -p test_integration
+        cat > test_integration/test_services.py << EOF
+        import os
+        import pytest
+        import asyncpg
+        import redis.asyncio as redis
+
+        @pytest.mark.asyncio
+        async def test_postgres_connection():
+            database_url = os.getenv('DATABASE_URL', 'postgresql://testuser:testpass@localhost:5432/testdb')
+            conn = await asyncpg.connect(database_url)
+            result = await conn.fetchval('SELECT 1')
+            assert result == 1
+            await conn.close()
+
+        @pytest.mark.asyncio
+        async def test_redis_connection():
+            redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+            r = redis.from_url(redis_url)
+            await r.set('test_key', 'test_value')
+            value = await r.get('test_key')
+            assert value == b'test_value'
+            await r.delete('test_key')
+            await r.aclose()
+        EOF
+
+        # Install dependencies and run tests
+        uv venv test_env
+        source test_env/bin/activate
+        uv pip install pytest pytest-asyncio asyncpg redis
+        python -m pytest test_integration/ -v
+
+    - name: Cleanup services
+      if: always()
+      run: |
+        docker compose -f docker-compose-minimal.yml down || true
+        docker system prune -f || true
+
+  test-without-services:
+    name: Tests without External Services
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Install uv
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+    - name: Run unit tests
+      env:
+        DEPLOYMENT_MODE: development
+        DATABASE_URL: sqlite:///./data/test.db
+        SECRET_KEY: test-secret-key
+      run: |
+        export PATH="$HOME/.cargo/bin:$PATH"
+
+        # Create basic unit tests
+        mkdir -p test_unit
+        cat > test_unit/test_config.py << EOF
+        import os
+        from enum import Enum
+
+        def test_deployment_mode():
+            mode = os.getenv('DEPLOYMENT_MODE', 'development')
+            assert mode in ['development', 'docker', 'production']
+
+        def test_database_url():
+            db_url = os.getenv('DATABASE_URL', 'sqlite:///./data/test.db')
+            assert db_url is not None
+            assert len(db_url) > 0
+        EOF
+
+        # Run unit tests
+        uv venv test_env
+        source test_env/bin/activate
+        uv pip install pytest
+        python -m pytest test_unit/ -v

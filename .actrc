@@ -1,0 +1,19 @@
+# act configuration file
+# Use larger runner image for better tool support
+-P ubuntu-latest=catthehacker/ubuntu:act-latest
+
+# Enable verbose output for debugging
+--verbose
+
+# Reuse containers for faster subsequent runs
+--reuse
+
+# Use custom secrets file
+--secret-file .secrets
+
+# Default platform mapping
+-P ubuntu-22.04=catthehacker/ubuntu:act-22.04
+-P ubuntu-20.04=catthehacker/ubuntu:act-20.04
+
+# Container architecture
+--container-architecture linux/amd64

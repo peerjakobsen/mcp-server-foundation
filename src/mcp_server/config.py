@@ -127,12 +127,11 @@ class MCPServerConfig(BaseSettings):
         default=True, description="Auto-create database tables"
     )
 
-    class Config:
-        """Pydantic configuration."""
-
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = False
+    model_config = {
+        "env_file": ".env",
+        "env_file_encoding": "utf-8",
+        "case_sensitive": False,
+    }
 
     @field_validator("deployment_mode", mode="before")
     def validate_deployment_mode(cls, v: Any) -> Any:

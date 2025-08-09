@@ -72,7 +72,7 @@ class MCPServerFoundation:
     def _register_health_checks(self) -> None:
         """Register health check endpoints."""
 
-        @self.app.resource("health://status")  # type: ignore[misc]
+        @self.app.resource("health://status")
         async def health_status() -> HealthResponse:
             """Health status endpoint."""
             from datetime import datetime
@@ -89,7 +89,7 @@ class MCPServerFoundation:
     def _register_example_tools(self) -> None:
         """Register example tools for demonstration."""
 
-        @self.app.tool  # type: ignore[misc]
+        @self.app.tool
         async def echo_message(message: str) -> dict[str, Any]:
             """Echo a message back to the client.
 
@@ -106,7 +106,7 @@ class MCPServerFoundation:
                 "timestamp": "2025-08-09T00:00:00Z",  # Would use actual timestamp
             }
 
-        @self.app.tool  # type: ignore[misc]
+        @self.app.tool
         async def get_server_info() -> dict[str, Any]:
             """Get information about the MCP server.
 

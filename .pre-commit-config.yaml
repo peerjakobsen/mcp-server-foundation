@@ -45,6 +45,11 @@ repos:
         language: system
         files: ^src/.*\.py$
         pass_filenames: false
+      - id: safety-check
+        name: safety vulnerability scan
+        entry: uv run safety scan
+        language: system
+        pass_filenames: false
 
   # YAML, JSON, and TOML validation
   - repo: https://github.com/adrienverge/yamllint
