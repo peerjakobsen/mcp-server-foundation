@@ -64,6 +64,9 @@ logs/
 # Agent OS (local development files)
 .agent-os/local/
 
+# Serena (local development state)
+.serena/
+
 # Security
 *.pem
 *.key
