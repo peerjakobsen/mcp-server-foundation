@@ -1,3 +1,4 @@
+---
 extends: default
 
 rules:
@@ -24,3 +25,11 @@ rules:
   # Allow comments
   comments:
     min-spaces-from-content: 1
+
+  # Disable document-start requirement
+  document-start: disable
+
+# Ignore directories with external YAML files
+ignore: |
+  .venv/
+  node_modules/
