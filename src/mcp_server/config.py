@@ -4,6 +4,7 @@ Provides type-safe configuration with Pydantic Settings supporting
 environment variables, .env files, and dual-mode deployment.
 """
 
+import os
 from enum import Enum
 from typing import Any
 
@@ -161,7 +162,9 @@ class MCPServerConfig(BaseSettings):
         """Set debug based on deployment mode if not explicitly set."""
         mode = info.data.get("deployment_mode", DeploymentMode.DEVELOPMENT)
 
-        if v is None or v == "":
+        # If no explicit value provided (None, empty string, or Field default False), 
+        # set based on deployment mode
+        if v is None or v == "" or (v is False and not os.getenv("DEBUG")):
             return mode in (DeploymentMode.DEVELOPMENT, DeploymentMode.UVX)
 
         # Handle string boolean values from environment variables

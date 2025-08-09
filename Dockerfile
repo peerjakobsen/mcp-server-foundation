@@ -112,12 +112,16 @@ RUN find /app -type f -name "*.pyc" -delete && \
     find /app -type d -name ".ruff_cache" -exec rm -rf {} + 2>/dev/null || true
 
 # ============================================================================
-# Production stage: Minimal distroless runtime
+# Production stage: Minimal Python runtime
 # ============================================================================
-FROM gcr.io/distroless/python3-debian12:${DISTROLESS_VERSION} AS production
+FROM python:${PYTHON_VERSION}-slim AS production
+
+# Create non-root user for security
+RUN groupadd -g 1000 mcp && \
+    useradd -r -u 1000 -g mcp -m -s /sbin/nologin mcp
 
 # Copy virtual environment from builder
-COPY --from=builder /app/.venv/lib/python3.13/site-packages /usr/local/lib/python3.13/dist-packages
+COPY --from=builder /app/.venv /app/.venv
 
 # Copy application from builder
 COPY --from=builder --chown=1000:1000 /app/src /app/src
@@ -127,7 +131,7 @@ COPY --from=builder --chown=1000:1000 /app/pyproject.toml /app/pyproject.toml
 WORKDIR /app
 
 # Set production environment variables
-ENV PYTHONPATH=/app \
+ENV PYTHONPATH=/app/src \
     PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
     DEPLOYMENT_MODE=production \
@@ -145,11 +149,10 @@ EXPOSE 8000
 
 # Health check for production
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD ["python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
 
 # Production entrypoint - handle signals for graceful shutdown
-# Use the Python from distroless image
-ENTRYPOINT ["python3"]
+ENTRYPOINT ["python"]
 CMD ["-m", "mcp_server.main"]
 
 # ============================================================================
