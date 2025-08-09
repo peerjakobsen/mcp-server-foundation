@@ -106,10 +106,10 @@ all = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/your-org/mcp-server-foundation"
-Repository = "https://github.com/your-org/mcp-server-foundation"
-Documentation = "https://your-org.github.io/mcp-server-foundation"
-Issues = "https://github.com/your-org/mcp-server-foundation/issues"
+Homepage = "https://github.com/peerjakobsen/mcp-server-foundation"
+Repository = "https://github.com/peerjakobsen/mcp-server-foundation"
+Documentation = "https://peerjakobsen.github.io/mcp-server-foundation"
+Issues = "https://github.com/peerjakobsen/mcp-server-foundation/issues"
 
 [project.scripts]
 mcp-server = "mcp_server.main:main"
