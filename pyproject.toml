@@ -71,6 +71,8 @@ dev = [
     "pytest-mock>=3.12.0",
     "pytest-cov>=4.1.0",
     "pytest-benchmark>=4.0.0",
+    "testcontainers>=4.0.0",
+    "pytest-docker>=3.0.0",
 
     # Code Quality
     "ruff>=0.12.8",

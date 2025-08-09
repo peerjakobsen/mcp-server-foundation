@@ -71,7 +71,12 @@ class MCPServerFoundation:
 
     def _register_health_checks(self) -> None:
         """Register health check endpoints."""
+        from .health import register_health_endpoints
 
+        # Register HTTP health endpoints for Docker/Kubernetes
+        self.health_manager = register_health_endpoints(self.app, self.config)
+
+        # Also keep the MCP resource for backward compatibility
         @self.app.resource("health://status")
         async def health_status() -> HealthResponse:
             """Health status endpoint."""

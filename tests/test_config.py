@@ -319,7 +319,13 @@ class TestMCPServerConfig:
     )
     def test_environment_variable_loading(self, env_var, expected_value):
         """Test loading configuration from environment variables."""
-        with patch.dict(os.environ, {env_var: str(expected_value)}):
+        env_vars = {env_var: str(expected_value)}
+
+        # For DATABASE_URL with PostgreSQL, we need production mode
+        if env_var == "DATABASE_URL" and "postgresql" in str(expected_value):
+            env_vars["DEPLOYMENT_MODE"] = "production"
+
+        with patch.dict(os.environ, env_vars):
             config = MCPServerConfig()
 
             # Convert env var name to config field name

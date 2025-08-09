@@ -164,6 +164,10 @@ class MCPServerConfig(BaseSettings):
         if v is None or v == "":
             return mode in (DeploymentMode.DEVELOPMENT, DeploymentMode.UVX)
 
+        # Handle string boolean values from environment variables
+        if isinstance(v, str):
+            return v.lower() in ("true", "1", "yes", "on")
+
         return bool(v)
 
     @field_validator("reload", mode="before")
@@ -175,6 +179,10 @@ class MCPServerConfig(BaseSettings):
         if v is None or v == "":
             return mode in (DeploymentMode.DEVELOPMENT, DeploymentMode.UVX)
 
+        # Handle string boolean values from environment variables
+        if isinstance(v, str):
+            return v.lower() in ("true", "1", "yes", "on")
+
         return bool(v)
 
     @field_validator("use_file_watcher", mode="before")
@@ -185,6 +193,10 @@ class MCPServerConfig(BaseSettings):
 
         if v is None or v == "":
             return mode in (DeploymentMode.DEVELOPMENT, DeploymentMode.UVX)
+
+        # Handle string boolean values from environment variables
+        if isinstance(v, str):
+            return v.lower() in ("true", "1", "yes", "on")
 
         return bool(v)
 
@@ -209,10 +221,10 @@ class MCPServerConfig(BaseSettings):
         }
 
         if self.storage_backend != StorageBackend.LOCAL:
-            # Only add non-None values to avoid type issues
-            if self.storage_bucket is not None:
+            # Only add non-None and non-empty values to avoid type issues
+            if self.storage_bucket:  # Checks for None and empty string
                 config["bucket"] = self.storage_bucket
-            if self.storage_region is not None:
+            if self.storage_region:  # Checks for None and empty string
                 config["region"] = self.storage_region
 
         return config

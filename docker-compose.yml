@@ -1,0 +1,236 @@
+# Docker Compose configuration for local development
+# Provides complete development environment with hot reload and service dependencies
+
+version: '3.9'
+
+services:
+  # Main MCP Server application
+  mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+      args:
+        PYTHON_VERSION: '3.13.6'
+        BUILD_DATE: ${BUILD_DATE:-$(date -u +'%Y-%m-%dT%H:%M:%SZ')}
+        VCS_REF: ${VCS_REF:-$(git rev-parse --short HEAD)}
+        VERSION: ${VERSION:-dev}
+    container_name: mcp-server-dev
+    hostname: mcp-server
+    ports:
+      - '8000:8000'  # Main application port
+      - '5678:5678'  # Python debugger port (debugpy)
+    environment:
+      # Application configuration
+      - DEPLOYMENT_MODE=development
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-in-production}
+      - DEBUG=true
+      - RELOAD=true
+
+      # Database configuration
+      - DATABASE_URL=postgresql://mcp:mcp@postgres:5432/mcp_dev
+
+      # Redis configuration
+      - REDIS_URL=redis://redis:6379/0
+
+      # OAuth configuration (optional)
+      - OAUTH_PROVIDER_URL=${OAUTH_PROVIDER_URL:-}
+      - OAUTH_CLIENT_ID=${OAUTH_CLIENT_ID:-}
+      - OAUTH_CLIENT_SECRET=${OAUTH_CLIENT_SECRET:-}
+
+      # Storage configuration
+      - STORAGE_BACKEND=local
+      - STORAGE_LOCAL_PATH=/app/data/storage
+
+      # Python configuration
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app
+    volumes:
+      # Mount source code for hot reload
+      - ./src:/app/src:delegated
+      - ./tests:/app/tests:delegated
+      - ./pyproject.toml:/app/pyproject.toml:delegated
+      - ./uv.lock:/app/uv.lock:delegated
+
+      # Mount data directories
+      - ./data:/app/data
+
+      # Mount .env file if it exists
+      - ./.env:/app/.env:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - mcp-network
+    healthcheck:
+      test: ['CMD', 'python', '-c', "import requests; requests.get('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    # Resource limits for development
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+  # PostgreSQL database for development
+  postgres:
+    image: postgres:17-alpine
+    container_name: mcp-postgres-dev
+    hostname: postgres
+    ports:
+      - '5432:5432'
+    environment:
+      - POSTGRES_USER=mcp
+      - POSTGRES_PASSWORD=mcp
+      - POSTGRES_DB=mcp_dev
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=en_US.UTF-8 --lc-ctype=en_US.UTF-8
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - mcp-network
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U mcp -d mcp_dev']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+
+  # Redis cache for development
+  redis:
+    image: redis:7-alpine
+    container_name: mcp-redis-dev
+    hostname: redis
+    ports:
+      - '6379:6379'
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    networks:
+      - mcp-network
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  # Optional: MinIO for S3-compatible storage testing
+  minio:
+    image: minio/minio:latest
+    container_name: mcp-minio-dev
+    hostname: minio
+    ports:
+      - '9000:9000'     # API port
+      - '9001:9001'     # Console port
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+      - MINIO_DEFAULT_BUCKETS=mcp-storage
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - mcp-network
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:9000/minio/health/live']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    profiles:
+      - storage
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+
+  # Optional: Adminer for database management
+  adminer:
+    image: adminer:latest
+    container_name: mcp-adminer-dev
+    ports:
+      - '8080:8080'
+    environment:
+      - ADMINER_DEFAULT_SERVER=postgres
+      - ADMINER_DESIGN=pepa-linha
+    networks:
+      - mcp-network
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    profiles:
+      - debug
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
+
+  # Optional: Redis Commander for cache inspection
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: mcp-redis-commander-dev
+    ports:
+      - '8081:8081'
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    networks:
+      - mcp-network
+    depends_on:
+      - redis
+    restart: unless-stopped
+    profiles:
+      - debug
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
+
+volumes:
+  postgres_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/postgres
+  redis_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/redis
+  minio_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/minio
+
+networks:
+  mcp-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16

@@ -1,6 +1,6 @@
 """Tests for MCP resource retrieval and functionality."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 from unittest.mock import patch
 
 import pytest
@@ -19,7 +19,7 @@ class TestHealthCheckResource:
 
         # Simulate the health check resource logic
         with patch("mcp_server.main.__version__", "1.0.0"):
-            timestamp = datetime.utcnow().isoformat() + "Z"
+            timestamp = datetime.now(UTC).isoformat() + "Z"
 
             health_response = HealthResponse(
                 status="healthy",
@@ -56,7 +56,7 @@ class TestHealthCheckResource:
 
             # Simulate health check response
             with patch("mcp_server.main.__version__", "1.0.0"):
-                timestamp = datetime.utcnow().isoformat() + "Z"
+                timestamp = datetime.now(UTC).isoformat() + "Z"
 
                 health_response = HealthResponse(
                     status="healthy",
@@ -75,7 +75,7 @@ class TestHealthCheckResource:
         server = MCPServerFoundation(test_config)  # noqa: F841
 
         # Test timestamp format compliance
-        timestamp = datetime.utcnow().isoformat() + "Z"
+        timestamp = datetime.now(UTC).isoformat() + "Z"
 
         # Verify timestamp format (ISO 8601 with Z suffix)
         assert timestamp.endswith("Z")
@@ -99,7 +99,7 @@ class TestHealthCheckResource:
                     status="healthy",
                     version=version,
                     deployment_mode=test_config.deployment_mode,
-                    timestamp=datetime.utcnow().isoformat() + "Z",
+                    timestamp=datetime.now(UTC).isoformat() + "Z",
                 )
 
                 assert health_response.version == version
@@ -170,7 +170,7 @@ class TestResourceRetrieval:
 
         # First request
         with patch("mcp_server.main.__version__", "1.0.0"):
-            first_timestamp = datetime.utcnow().isoformat() + "Z"
+            first_timestamp = datetime.now(UTC).isoformat() + "Z"
             first_response = HealthResponse(
                 status="healthy",
                 version="1.0.0",
@@ -180,7 +180,7 @@ class TestResourceRetrieval:
 
         # Simulate second request (would typically be from cache)
         with patch("mcp_server.main.__version__", "1.0.0"):
-            second_timestamp = datetime.utcnow().isoformat() + "Z"
+            second_timestamp = datetime.now(UTC).isoformat() + "Z"
             second_response = HealthResponse(
                 status="healthy",
                 version="1.0.0",
@@ -211,7 +211,7 @@ class TestResourceRetrieval:
                 status="healthy",
                 version="1.0.0",
                 deployment_mode=test_config.deployment_mode,
-                timestamp=datetime.utcnow().isoformat() + "Z",
+                timestamp=datetime.now(UTC).isoformat() + "Z",
             )
 
         # Verify structured data response
@@ -256,7 +256,7 @@ class TestResourceIntegration:
                     status="healthy",
                     version="1.0.0",
                     deployment_mode=test_config.deployment_mode,
-                    timestamp=datetime.utcnow().isoformat() + "Z",
+                    timestamp=datetime.now(UTC).isoformat() + "Z",
                 )
                 responses.append(response)
 
@@ -295,7 +295,7 @@ class TestResourceIntegration:
                     status="healthy",
                     version="1.0.0",
                     deployment_mode=config.deployment_mode,
-                    timestamp=datetime.utcnow().isoformat() + "Z",
+                    timestamp=datetime.now(UTC).isoformat() + "Z",
                 )
 
             # Verify configuration-specific values
@@ -345,7 +345,7 @@ class TestResourcePerformance:
                 status="healthy",
                 version="1.0.0",
                 deployment_mode=test_config.deployment_mode,
-                timestamp=datetime.utcnow().isoformat() + "Z",
+                timestamp=datetime.now(UTC).isoformat() + "Z",
             )
 
         end_time = time.time()
@@ -369,7 +369,7 @@ class TestResourcePerformance:
                     status="healthy",
                     version="1.0.0",
                     deployment_mode=test_config.deployment_mode,
-                    timestamp=datetime.utcnow().isoformat() + "Z",
+                    timestamp=datetime.now(UTC).isoformat() + "Z",
                 )
                 responses.append(response)
 
@@ -392,7 +392,7 @@ class TestResourcePerformance:
                 status="healthy",
                 version="1.0.0",
                 deployment_mode=test_config.deployment_mode,
-                timestamp=datetime.utcnow().isoformat() + "Z",
+                timestamp=datetime.now(UTC).isoformat() + "Z",
             )
 
         # Convert to JSON-like representation to estimate size
