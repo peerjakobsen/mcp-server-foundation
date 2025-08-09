@@ -1,8 +1,6 @@
 # Docker Compose configuration for local development
 # Provides complete development environment with hot reload and service dependencies
 
-version: '3.9'
-
 services:
   # Main MCP Server application
   mcp-server:

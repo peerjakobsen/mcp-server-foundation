@@ -162,7 +162,7 @@ class MCPServerConfig(BaseSettings):
         """Set debug based on deployment mode if not explicitly set."""
         mode = info.data.get("deployment_mode", DeploymentMode.DEVELOPMENT)
 
-        # If no explicit value provided (None, empty string, or Field default False), 
+        # If no explicit value provided (None, empty string, or Field default False),
         # set based on deployment mode
         if v is None or v == "" or (v is False and not os.getenv("DEBUG")):
             return mode in (DeploymentMode.DEVELOPMENT, DeploymentMode.UVX)

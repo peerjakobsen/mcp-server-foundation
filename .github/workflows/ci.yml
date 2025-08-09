@@ -44,6 +44,9 @@ jobs:
       - name: Create test database directory
         run: mkdir -p ./data
 
+      - name: Copy environment configuration
+        run: cp .env.example .env
+
       - name: Run ${{ matrix.test-group }} tests
         run: |
           if [ "${{ matrix.test-group }}" = "unit" ]; then
@@ -85,6 +88,9 @@ jobs:
 
       - name: Install dependencies
         run: uv sync --all-extras
+
+      - name: Copy environment configuration
+        run: cp .env.example .env
 
       - name: Run Ruff format check
         run: uv run ruff format --check .
@@ -152,6 +158,9 @@ jobs:
 
       - name: Create test database directory
         run: mkdir -p ./data
+
+      - name: Copy environment configuration
+        run: cp .env.example .env
 
       - name: Run tests with coverage
         run: |

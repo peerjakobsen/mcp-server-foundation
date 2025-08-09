@@ -856,7 +856,7 @@ class TestHTTPTransport:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_http_client_connection(self, _test_config):
+    async def test_http_client_connection(self, test_config):
         """Test HTTP client connection to MCP server."""
         import httpx
 
@@ -1004,7 +1004,7 @@ class TestHTTPTransport:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_concurrent_http_connections(self, _test_config):
+    async def test_concurrent_http_connections(self, test_config):
         """Test handling of concurrent HTTP connections."""
         import asyncio
 
@@ -1053,7 +1053,7 @@ class TestHTTPTransport:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_http_error_responses(self, _test_config):
+    async def test_http_error_responses(self, test_config):
         """Test HTTP error response handling."""
         import httpx
 
@@ -1113,7 +1113,7 @@ class TestHTTPTransport:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_http_timeout_handling(self, _test_config):
+    async def test_http_timeout_handling(self, test_config):
         """Test HTTP request timeout handling."""
         import asyncio
 
