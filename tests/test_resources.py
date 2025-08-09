@@ -7,6 +7,7 @@ import pytest
 
 from mcp_server.config import DeploymentMode, MCPServerConfig
 from mcp_server.main import HealthResponse, MCPServerFoundation
+from tests.conftest import PRODUCTION_TEST_SECRET_KEY, TEST_SECRET_KEY
 
 
 class TestHealthCheckResource:
@@ -49,7 +50,7 @@ class TestHealthCheckResource:
             config = MCPServerConfig(
                 deployment_mode=mode,
                 storage_path=str(temp_dir / f"health_test_{mode}"),
-                secret_key="test-key",
+                secret_key=TEST_SECRET_KEY,
             )
 
             server = MCPServerFoundation(config)  # noqa: F841
@@ -108,6 +109,7 @@ class TestHealthCheckResource:
 class TestResourceRetrieval:
     """Test resource retrieval functionality."""
 
+    @pytest.mark.unit
     def test_resource_uri_format(self, test_config):
         """Test resource URI format compliance."""
         server = MCPServerFoundation(test_config)  # noqa: F841
@@ -282,7 +284,7 @@ class TestResourceIntegration:
                 server_name="prod-server",
                 debug=False,
                 storage_path=str(temp_dir / "prod"),
-                secret_key="production-secret",
+                secret_key=PRODUCTION_TEST_SECRET_KEY,
             ),
         ]
 
@@ -302,6 +304,7 @@ class TestResourceIntegration:
             assert health_response.deployment_mode == config.deployment_mode
             assert health_response.status == "healthy"
 
+    @pytest.mark.unit
     def test_resource_registration_validation(self, test_config):
         """Test resource registration validation."""
         server = MCPServerFoundation(test_config)  # noqa: F841
@@ -382,6 +385,7 @@ class TestResourcePerformance:
         for response in responses:
             assert response.status == "healthy"
 
+    @pytest.mark.unit
     def test_resource_data_size_limits(self, test_config):
         """Test resource data size handling."""
         server = MCPServerFoundation(test_config)  # noqa: F841

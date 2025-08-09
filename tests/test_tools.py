@@ -6,6 +6,7 @@ import pytest
 
 from mcp_server.config import DeploymentMode, MCPServerConfig
 from mcp_server.main import MCPServerFoundation
+from tests.conftest import PRODUCTION_TEST_SECRET_KEY, TEST_SECRET_KEY
 
 
 class TestExampleTools:
@@ -82,6 +83,7 @@ class TestExampleTools:
         assert expected_result["auth_enabled"] == test_config.auth_enabled
         assert expected_result["storage_backend"] == test_config.storage_backend
 
+    @pytest.mark.unit
     def test_tool_parameter_validation(self, test_config):
         """Test tool parameter validation."""
         server = MCPServerFoundation(test_config)  # noqa: F841
@@ -124,6 +126,7 @@ class TestExampleTools:
         unicode_message = "Hello in different languages: 你好, مرحبا, Здравствуйте"
         assert isinstance(unicode_message, str)
 
+    @pytest.mark.unit
     def test_tool_registration_in_different_modes(self, temp_dir):
         """Test tool registration across different deployment modes."""
         modes = [
@@ -137,7 +140,7 @@ class TestExampleTools:
             config = MCPServerConfig(
                 deployment_mode=mode,
                 storage_path=str(temp_dir / f"tools_test_{mode}"),
-                secret_key="test-key",
+                secret_key=TEST_SECRET_KEY,
             )
 
             server = MCPServerFoundation(config)  # noqa: F841
@@ -197,7 +200,7 @@ class TestToolIntegration:
                 debug=False,
                 server_name="prod-server",
                 storage_path=str(temp_dir / "prod"),
-                secret_key="production-secret",
+                secret_key=PRODUCTION_TEST_SECRET_KEY,
             ),
         ]
 
@@ -221,6 +224,7 @@ class TestToolIntegration:
             assert info_result["debug"] == config.debug
             assert info_result["deployment_mode"] == config.deployment_mode
 
+    @pytest.mark.unit
     def test_tool_response_format_validation(self, test_config):
         """Test that tool responses follow expected format."""
         server = MCPServerFoundation(test_config)  # noqa: F841

@@ -234,7 +234,7 @@ class MCPAssertions:
         assert "id" in message, "Missing id field for request"
 
         if "params" in message:
-            assert isinstance(message["params"], (dict, list)), (
+            assert isinstance(message["params"], dict | list), (
                 f"Invalid params type: {type(message['params'])}"
             )
 
@@ -281,7 +281,7 @@ class MCPAssertions:
         assert "id" not in message, "Notification must not have id field"
 
         if "params" in message:
-            assert isinstance(message["params"], (dict, list)), (
+            assert isinstance(message["params"], dict | list), (
                 f"Invalid params type: {type(message['params'])}"
             )
 

@@ -1,6 +1,7 @@
 """Integration tests for the MCP server foundation."""
 
 import asyncio
+import contextlib
 import os
 from pathlib import Path
 from unittest.mock import patch
@@ -14,12 +15,14 @@ from mcp_server.config import (
     get_config,
 )
 from mcp_server.main import MCPServerFoundation
+from tests.conftest import INTEGRATION_TEST_SECRET_KEY
 
 
 class TestFullServerIntegration:
     """Test full server integration scenarios."""
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_complete_server_lifecycle(self, test_config):
         """Test complete server lifecycle from initialization to shutdown."""
         # Initialize server
@@ -43,6 +46,7 @@ class TestFullServerIntegration:
         assert server.app is not None
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_environment_configuration_integration(self, temp_dir):
         """Test integration with environment-based configuration."""
         # Set up environment variables
@@ -55,7 +59,7 @@ class TestFullServerIntegration:
             "STORAGE_BACKEND": "s3",
             "STORAGE_BUCKET": "test-bucket",
             "STORAGE_PATH": str(temp_dir / "storage"),
-            "SECRET_KEY": "integration-test-secret",
+            "SECRET_KEY": INTEGRATION_TEST_SECRET_KEY,
             "REDIS_URL": "redis://localhost:6379/0",
         }
 
@@ -71,7 +75,7 @@ class TestFullServerIntegration:
             assert config.database_url == "postgresql://test:test@localhost:5432/test"
             assert config.storage_backend == StorageBackend.S3
             assert config.storage_bucket == "test-bucket"
-            assert config.secret_key == "integration-test-secret"
+            assert config.secret_key == INTEGRATION_TEST_SECRET_KEY
             assert config.redis_url == "redis://localhost:6379/0"
 
             # Create server with environment configuration
@@ -83,6 +87,7 @@ class TestFullServerIntegration:
             assert not server.config.debug
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_development_to_production_transition(self, temp_dir):
         """Test transition from development to production configuration."""
         # Start with development configuration
@@ -118,13 +123,14 @@ class TestFullServerIntegration:
         assert prod_server.config.is_production
         assert not prod_server.config.debug
         assert prod_server.config.database_url.startswith("postgresql")
-        assert prod_server.config.secret_key == "production-secret-key"
+        assert prod_server.config.secret_key == "production-secret-key"  # noqa: S105
 
         # Verify both servers can coexist (different configurations)
         assert dev_server.config.deployment_mode != prod_server.config.deployment_mode
         assert dev_server.config.server_name != prod_server.config.server_name
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_multi_storage_backend_integration(self, temp_dir):
         """Test integration with different storage backends."""
         storage_backends = [
@@ -167,6 +173,7 @@ class TestFullServerIntegration:
             assert server.app is not None
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_configuration_validation_integration(self):
         """Test configuration validation integration."""
         # Test valid configurations
@@ -214,6 +221,7 @@ class TestAsyncIntegration:
     """Test async functionality integration."""
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_concurrent_server_operations(self, test_config):
         """Test concurrent server operations."""
         server = MCPServerFoundation(test_config)
@@ -245,12 +253,12 @@ class TestAsyncIntegration:
         tasks = []
 
         # Add tool call tasks
-        for i in range(5):
-            task = simulate_tool_call(f"Concurrent message {i}")
+        for idx in range(5):
+            task = simulate_tool_call(f"Concurrent message {idx}")
             tasks.append(task)
 
         # Add health check tasks
-        for i in range(3):
+        for _ in range(3):
             task = simulate_health_check()
             tasks.append(task)
 
@@ -273,6 +281,7 @@ class TestAsyncIntegration:
             assert result.deployment_mode == server.config.deployment_mode
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_async_error_handling(self, test_config):
         """Test async error handling integration."""
         MCPServerFoundation(test_config)
@@ -302,6 +311,7 @@ class TestAsyncIntegration:
         assert results[2] == {"status": "success"}
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_async_resource_management(self, test_config):
         """Test async resource management."""
         MCPServerFoundation(test_config)
@@ -341,13 +351,14 @@ class TestProductionReadiness:
     """Test production readiness scenarios."""
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_production_configuration_completeness(self, temp_dir):
         """Test production configuration completeness."""
         prod_config = MCPServerConfig(
             deployment_mode=DeploymentMode.PRODUCTION,
             server_name="prod-mcp-server",
             debug=False,
-            host="0.0.0.0",
+            host="127.0.0.1",  # Use localhost instead of binding to all interfaces in tests
             port=8000,
             workers=4,
             auth_enabled=True,
@@ -372,7 +383,7 @@ class TestProductionReadiness:
         assert server.config.is_production
         assert not server.config.debug
         assert server.config.auth_enabled
-        assert server.config.secret_key != "dev-secret-key-change-in-production"
+        assert server.config.secret_key != "dev-secret-key-change-in-production"  # noqa: S105
         assert server.config.database_url.startswith("postgresql://")
         assert server.config.redis_url is not None
         assert server.config.storage_backend == StorageBackend.S3
@@ -382,6 +393,7 @@ class TestProductionReadiness:
         assert server.config.max_connections >= 100
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_security_configuration_integration(self, temp_dir):
         """Test security configuration integration."""
         secure_config = MCPServerConfig(
@@ -406,6 +418,7 @@ class TestProductionReadiness:
         assert server.config.cache_ttl > 0  # Caching enabled
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_scalability_configuration(self, temp_dir):
         """Test scalability configuration."""
         scalable_config = MCPServerConfig(
@@ -436,6 +449,7 @@ class TestErrorRecovery:
     """Test error recovery and resilience."""
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_configuration_error_recovery(self):
         """Test recovery from configuration errors."""
         # Test with initially invalid config that gets corrected
@@ -456,6 +470,7 @@ class TestErrorRecovery:
         assert server.app is not None
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_startup_error_scenarios(self, temp_dir):
         """Test various startup error scenarios."""
         # Test with minimal valid configuration
@@ -486,6 +501,7 @@ class TestErrorRecovery:
         assert server_with_nones.app is not None
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_resource_cleanup_on_errors(self, temp_dir):
         """Test resource cleanup when errors occur."""
         config = MCPServerConfig(
@@ -516,6 +532,7 @@ class TestJSONRPCMessageHandling:
     """Test JSON-RPC 2.0 message handling compliance."""
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_valid_request_parsing(self, test_server):
         """Test parsing of valid JSON-RPC 2.0 requests."""
         from .utils import MCPAssertions, MCPMessageBuilder
@@ -533,6 +550,7 @@ class TestJSONRPCMessageHandling:
         assert request["id"] == "test-123"
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_request_with_params_parsing(self, test_server):
         """Test parsing of JSON-RPC 2.0 requests with parameters."""
         from .utils import MCPAssertions, MCPMessageBuilder
@@ -555,6 +573,7 @@ class TestJSONRPCMessageHandling:
         assert request_with_params["params"]["arguments"]["message"] == "test message"
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_notification_parsing(self, test_server):
         """Test parsing of JSON-RPC 2.0 notifications."""
         from .utils import MCPAssertions, MCPMessageBuilder
@@ -573,6 +592,7 @@ class TestJSONRPCMessageHandling:
         assert notification["method"] == "notifications/progress"
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_success_response_creation(self, test_server):
         """Test creation of JSON-RPC 2.0 success responses."""
         from .utils import MCPAssertions, MCPMessageBuilder
@@ -590,6 +610,7 @@ class TestJSONRPCMessageHandling:
         assert response["id"] == "test-response-123"
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_error_response_creation(self, test_server):
         """Test creation of JSON-RPC 2.0 error responses."""
         from .utils import MCPAssertions, MCPMessageBuilder
@@ -608,6 +629,7 @@ class TestJSONRPCMessageHandling:
         assert error_response["error"]["data"]["method"] == "unknown_method"
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_batch_request_handling(self, test_server):
         """Test JSON-RPC 2.0 batch request handling."""
         from .utils import MCPAssertions, MCPMessageBuilder
@@ -637,6 +659,7 @@ class TestJSONRPCMessageHandling:
         MCPAssertions.assert_valid_jsonrpc_notification(batch_request[2])
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_invalid_message_validation(self, test_server):
         """Test validation of invalid JSON-RPC messages."""
         from .utils import MCPAssertions, MCPTestData
@@ -669,6 +692,7 @@ class TestJSONRPCMessageHandling:
             )
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_mcp_tool_message_format(self, test_server):
         """Test MCP-specific tool call message formats."""
         from .utils import MCPAssertions, MCPTestData
@@ -690,6 +714,7 @@ class TestJSONRPCMessageHandling:
         assert tool_response["content"][0]["type"] == "text"
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_mcp_resource_message_format(self, test_server):
         """Test MCP-specific resource message formats."""
         from .utils import MCPAssertions, MCPTestData
@@ -710,6 +735,7 @@ class TestJSONRPCMessageHandling:
         assert resource_response["contents"][0]["mimeType"] == "application/json"
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_error_code_standards(self, test_server):
         """Test standard JSON-RPC error codes."""
         from .utils import MCPMessageBuilder
@@ -732,6 +758,7 @@ class TestJSONRPCMessageHandling:
             assert error_response["error"]["message"] == message
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_concurrent_message_processing(self, test_server):
         """Test concurrent processing of multiple JSON-RPC messages."""
 
@@ -788,6 +815,7 @@ class TestHTTPTransport:
     """Test HTTP transport functionality with httpx."""
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_http_server_startup_shutdown(self, test_config):
         """Test FastMCP HTTP server startup and shutdown."""
         import asyncio
@@ -813,10 +841,8 @@ class TestHTTPTransport:
             finally:
                 if server_task and not server_task.done():
                     server_task.cancel()
-                    try:
+                    with contextlib.suppress(asyncio.CancelledError):
                         await server_task
-                    except asyncio.CancelledError:
-                        pass
 
         # Test server can start and stop
         async with run_test_server():
@@ -829,7 +855,8 @@ class TestHTTPTransport:
             assert server_task.done() or server_task.cancelled()
 
     @pytest.mark.asyncio
-    async def test_http_client_connection(self, test_config):
+    @pytest.mark.integration
+    async def test_http_client_connection(self, _test_config):
         """Test HTTP client connection to MCP server."""
         import httpx
 
@@ -843,7 +870,7 @@ class TestHTTPTransport:
         )
 
         # Test client can make HTTP requests
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient() as _client:
             # This is testing the client setup, not the actual server
             # In real scenarios, MCP clients would use proper protocol headers
             try:
@@ -858,10 +885,11 @@ class TestHTTPTransport:
             except Exception as e:
                 # Expected - raw HTTP connections should be handled appropriately
                 assert isinstance(
-                    e, (httpx.ConnectError, ConnectionError)
+                    e, httpx.ConnectError | ConnectionError
                 ) or "406" in str(e)
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_mcp_protocol_headers(self, test_config):
         """Test MCP protocol-specific HTTP headers."""
         import httpx
@@ -908,6 +936,7 @@ class TestHTTPTransport:
             )
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_http_request_validation(self, test_config):
         """Test HTTP request validation and error handling."""
         import httpx
@@ -974,7 +1003,8 @@ class TestHTTPTransport:
                         raise e
 
     @pytest.mark.asyncio
-    async def test_concurrent_http_connections(self, test_config):
+    @pytest.mark.integration
+    async def test_concurrent_http_connections(self, _test_config):
         """Test handling of concurrent HTTP connections."""
         import asyncio
 
@@ -1004,7 +1034,7 @@ class TestHTTPTransport:
 
         # Test multiple concurrent client connections
         num_clients = 10
-        async with httpx.AsyncClient() as shared_client:
+        async with httpx.AsyncClient() as _shared_client:
             # Create concurrent tasks
             tasks = [simulate_client_request(i) for i in range(num_clients)]
 
@@ -1022,7 +1052,8 @@ class TestHTTPTransport:
             assert len(session_ids) == num_clients  # Each should have unique session
 
     @pytest.mark.asyncio
-    async def test_http_error_responses(self, test_config):
+    @pytest.mark.integration
+    async def test_http_error_responses(self, _test_config):
         """Test HTTP error response handling."""
         import httpx
 
@@ -1057,7 +1088,7 @@ class TestHTTPTransport:
             },
         ]
 
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient() as _client:
             for scenario in error_scenarios:
                 # Create mock error response
                 mock_response = create_mock_server_response(
@@ -1081,7 +1112,8 @@ class TestHTTPTransport:
                     assert "error" in mock_response["content"]
 
     @pytest.mark.asyncio
-    async def test_http_timeout_handling(self, test_config):
+    @pytest.mark.integration
+    async def test_http_timeout_handling(self, _test_config):
         """Test HTTP request timeout handling."""
         import asyncio
 
@@ -1116,7 +1148,7 @@ class TestHTTPTransport:
                 await asyncio.wait_for(simulate_slow_request(), timeout=0.1)
 
                 # Should not reach here due to timeout
-                assert False, "Expected timeout did not occur"
+                raise AssertionError("Expected timeout did not occur")
 
             except TimeoutError:
                 # Expected timeout behavior
@@ -1124,6 +1156,7 @@ class TestHTTPTransport:
                 assert elapsed < 0.2  # Should timeout quickly
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_http_connection_pooling(self, test_config):
         """Test HTTP connection pooling behavior."""
         import httpx

@@ -12,11 +12,13 @@ from mcp_server.config import (
     StorageBackend,
     get_config,
 )
+from tests.conftest import TEST_SECRET_KEY
 
 
 class TestDeploymentMode:
     """Test the DeploymentMode enum."""
 
+    @pytest.mark.unit
     def test_deployment_mode_values(self):
         """Test deployment mode enum values."""
         assert DeploymentMode.DEVELOPMENT == "development"
@@ -28,6 +30,7 @@ class TestDeploymentMode:
 class TestLogLevel:
     """Test the LogLevel enum."""
 
+    @pytest.mark.unit
     def test_log_level_values(self):
         """Test log level enum values."""
         assert LogLevel.DEBUG == "DEBUG"
@@ -40,6 +43,7 @@ class TestLogLevel:
 class TestStorageBackend:
     """Test the StorageBackend enum."""
 
+    @pytest.mark.unit
     def test_storage_backend_values(self):
         """Test storage backend enum values."""
         assert StorageBackend.LOCAL == "local"
@@ -51,6 +55,7 @@ class TestStorageBackend:
 class TestMCPServerConfig:
     """Test the MCPServerConfig class."""
 
+    @pytest.mark.unit
     def test_default_configuration(self):
         """Test configuration with default values."""
         config = MCPServerConfig()
@@ -71,7 +76,7 @@ class TestMCPServerConfig:
         assert config.auth_enabled is False  # From .env file
         assert config.oauth_provider_url == ""  # From .env file
         assert config.api_key_header == "X-API-Key"
-        assert config.secret_key == "dev-secret-key-change-in-production"
+        assert config.secret_key == "dev-secret-key-change-in-production"  # noqa: S105
 
         # Performance settings
         assert config.max_connections == 100
@@ -105,6 +110,7 @@ class TestMCPServerConfig:
         assert config.use_file_watcher is True  # From .env file
         assert config.auto_create_tables is True
 
+    @pytest.mark.unit
     def test_development_mode_configuration(self):
         """Test configuration in development mode."""
         config = MCPServerConfig(deployment_mode=DeploymentMode.DEVELOPMENT)
@@ -117,6 +123,7 @@ class TestMCPServerConfig:
         assert config.use_file_watcher is True
         assert config.database_url == "sqlite:///./data/mcp.db"
 
+    @pytest.mark.unit
     def test_uvx_mode_configuration(self):
         """Test configuration in uvx mode."""
         config = MCPServerConfig(deployment_mode=DeploymentMode.UVX)
@@ -128,6 +135,7 @@ class TestMCPServerConfig:
         assert config.reload is True
         assert config.use_file_watcher is True
 
+    @pytest.mark.unit
     def test_production_mode_configuration(self):
         """Test configuration in production mode."""
         # Explicitly set debug to override .env file
@@ -145,6 +153,7 @@ class TestMCPServerConfig:
         assert config.reload is False
         assert config.use_file_watcher is False
 
+    @pytest.mark.unit
     def test_docker_mode_configuration(self):
         """Test configuration in docker mode."""
         config = MCPServerConfig(
@@ -161,13 +170,14 @@ class TestMCPServerConfig:
         assert config.reload is False
         assert config.use_file_watcher is False
 
+    @pytest.mark.unit
     def test_custom_configuration(self):
         """Test configuration with custom values."""
         config = MCPServerConfig(
             server_name="custom-server",
             deployment_mode=DeploymentMode.PRODUCTION,
             debug=True,  # Explicitly set despite production mode
-            host="0.0.0.0",
+            host="127.0.0.1",  # Use localhost instead of binding to all interfaces in tests
             port=9000,
             database_url="postgresql://user:pass@localhost/db",
             redis_url="redis://localhost:6379/1",
@@ -179,7 +189,7 @@ class TestMCPServerConfig:
         assert config.server_name == "custom-server"
         assert config.deployment_mode == DeploymentMode.PRODUCTION
         assert config.debug is True  # Explicitly set value preserved
-        assert config.host == "0.0.0.0"
+        assert config.host == "127.0.0.1"
         assert config.port == 9000
         assert config.database_url == "postgresql://user:pass@localhost/db"
         assert config.redis_url == "redis://localhost:6379/1"
@@ -187,6 +197,7 @@ class TestMCPServerConfig:
         assert config.storage_bucket == "my-bucket"
         assert config.storage_region == "us-west-2"
 
+    @pytest.mark.unit
     def test_deployment_mode_string_normalization(self):
         """Test deployment mode string normalization."""
         config = MCPServerConfig(deployment_mode="DEVELOPMENT")
@@ -195,6 +206,7 @@ class TestMCPServerConfig:
         config = MCPServerConfig(deployment_mode="Production")
         assert config.deployment_mode == "production"
 
+    @pytest.mark.unit
     def test_database_url_validation_development(self):
         """Test database URL validation for development modes."""
         # Should force SQLite for development mode
@@ -211,6 +223,7 @@ class TestMCPServerConfig:
         )
         assert config.database_url == "sqlite:///./data/mcp.db"
 
+    @pytest.mark.unit
     def test_database_url_validation_production(self):
         """Test database URL validation for production modes."""
         # Should preserve non-SQLite URLs in production
@@ -220,6 +233,7 @@ class TestMCPServerConfig:
         )
         assert config.database_url == "postgresql://localhost/prod"
 
+    @pytest.mark.unit
     def test_port_validation(self):
         """Test port number validation."""
         with pytest.raises(ValueError):
@@ -232,6 +246,7 @@ class TestMCPServerConfig:
         config = MCPServerConfig(port=8080)
         assert config.port == 8080
 
+    @pytest.mark.unit
     def test_workers_validation(self):
         """Test workers validation."""
         with pytest.raises(ValueError):
@@ -240,6 +255,7 @@ class TestMCPServerConfig:
         config = MCPServerConfig(workers=4)
         assert config.workers == 4
 
+    @pytest.mark.unit
     def test_redis_db_validation(self):
         """Test Redis database number validation."""
         with pytest.raises(ValueError):
@@ -251,25 +267,27 @@ class TestMCPServerConfig:
         config = MCPServerConfig(redis_db=5)
         assert config.redis_db == 5
 
-    def test_get_storage_config_local(self):
+    @pytest.mark.unit
+    def test_get_storage_config_local(self, temp_dir):
         """Test storage configuration for local backend."""
         config = MCPServerConfig(
             storage_backend=StorageBackend.LOCAL,
-            storage_path="/tmp/storage",
+            storage_path=str(temp_dir / "storage"),
         )
 
         storage_config = config.get_storage_config()
         expected = {
             "backend": StorageBackend.LOCAL,
-            "path": "/tmp/storage",
+            "path": str(temp_dir / "storage"),
         }
         assert storage_config == expected
 
-    def test_get_storage_config_s3(self):
+    @pytest.mark.unit
+    def test_get_storage_config_s3(self, temp_dir):
         """Test storage configuration for S3 backend."""
         config = MCPServerConfig(
             storage_backend=StorageBackend.S3,
-            storage_path="/tmp/storage",
+            storage_path=str(temp_dir / "storage"),
             storage_bucket="my-bucket",
             storage_region="us-east-1",
         )
@@ -277,17 +295,18 @@ class TestMCPServerConfig:
         storage_config = config.get_storage_config()
         expected = {
             "backend": StorageBackend.S3,
-            "path": "/tmp/storage",
+            "path": str(temp_dir / "storage"),
             "bucket": "my-bucket",
             "region": "us-east-1",
         }
         assert storage_config == expected
 
-    def test_get_storage_config_partial_cloud_settings(self):
+    @pytest.mark.unit
+    def test_get_storage_config_partial_cloud_settings(self, temp_dir):
         """Test storage configuration with partial cloud settings."""
         config = MCPServerConfig(
             storage_backend=StorageBackend.AZURE,
-            storage_path="/tmp/storage",
+            storage_path=str(temp_dir / "storage"),
             storage_bucket="my-bucket",
             # storage_region is None
         )
@@ -295,7 +314,7 @@ class TestMCPServerConfig:
         storage_config = config.get_storage_config()
         expected = {
             "backend": StorageBackend.AZURE,
-            "path": "/tmp/storage",
+            "path": str(temp_dir / "storage"),
             "bucket": "my-bucket",
             # region should not be included when None
         }
@@ -306,7 +325,10 @@ class TestMCPServerConfig:
         [
             ("DEPLOYMENT_MODE", "production"),
             ("DEBUG", True),
-            ("HOST", "0.0.0.0"),
+            (
+                "HOST",
+                "127.0.0.1",
+            ),  # Use localhost instead of binding to all interfaces in tests
             ("PORT", 9000),
             ("SERVER_NAME", "test-server"),
             ("LOG_LEVEL", "DEBUG"),
@@ -314,9 +336,10 @@ class TestMCPServerConfig:
             ("REDIS_URL", "redis://localhost:6379"),
             ("STORAGE_BACKEND", "s3"),
             ("STORAGE_BUCKET", "test-bucket"),
-            ("SECRET_KEY", "test-secret"),
+            ("SECRET_KEY", TEST_SECRET_KEY),
         ],
     )
+    @pytest.mark.unit
     def test_environment_variable_loading(self, env_var, expected_value):
         """Test loading configuration from environment variables."""
         env_vars = {env_var: str(expected_value)}
@@ -346,11 +369,13 @@ class TestMCPServerConfig:
 class TestGetConfig:
     """Test the get_config function."""
 
+    @pytest.mark.unit
     def test_get_config_returns_instance(self):
         """Test that get_config returns a MCPServerConfig instance."""
         config = get_config()
         assert isinstance(config, MCPServerConfig)
 
+    @pytest.mark.unit
     def test_get_config_singleton_behavior(self):
         """Test that get_config returns the same instance (singleton-like behavior)."""
         config1 = get_config()
@@ -360,6 +385,7 @@ class TestGetConfig:
         assert config1.server_name == config2.server_name
         assert config1.deployment_mode == config2.deployment_mode
 
+    @pytest.mark.unit
     def test_get_config_with_environment_override(self):
         """Test get_config with environment variable overrides."""
         with patch.dict(

@@ -5,6 +5,7 @@ for enterprise-ready MCP server applications.
 """
 
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -12,6 +13,9 @@ from fastmcp import FastMCP
 from pydantic import BaseModel
 
 from .config import DeploymentMode, MCPServerConfig, get_config
+
+# Version information for health checks and tool responses
+__version__ = "1.0.0"
 
 
 class HealthResponse(BaseModel):
@@ -77,10 +81,9 @@ class MCPServerFoundation:
         self.health_manager = register_health_endpoints(self.app, self.config)
 
         # Also keep the MCP resource for backward compatibility
-        @self.app.resource("health://status")
+        @self.app.resource("health://status")  # type: ignore[misc]
         async def health_status() -> HealthResponse:
             """Health status endpoint."""
-            from datetime import datetime
 
             from . import __version__
 
@@ -88,13 +91,13 @@ class MCPServerFoundation:
                 status="healthy",
                 version=__version__,
                 deployment_mode=self.config.deployment_mode,
-                timestamp=datetime.utcnow().isoformat() + "Z",
+                timestamp=datetime.now(UTC).isoformat() + "Z",
             )
 
     def _register_example_tools(self) -> None:
         """Register example tools for demonstration."""
 
-        @self.app.tool
+        @self.app.tool  # type: ignore[misc]
         async def echo_message(message: str) -> dict[str, Any]:
             """Echo a message back to the client.
 
@@ -111,7 +114,7 @@ class MCPServerFoundation:
                 "timestamp": "2025-08-09T00:00:00Z",  # Would use actual timestamp
             }
 
-        @self.app.tool
+        @self.app.tool  # type: ignore[misc]
         async def get_server_info() -> dict[str, Any]:
             """Get information about the MCP server.
 
@@ -178,7 +181,22 @@ def main() -> None:
     try:
         import asyncio
 
-        asyncio.run(app.run_http_async(host=config.host, port=config.port))
+        async def run_server() -> None:
+            """Run the MCP server with startup logging."""
+
+            # Create a background task for startup logging
+            async def startup_logger() -> None:
+                # Give the server a moment to start
+                await asyncio.sleep(0.5)
+                print("Application startup complete")
+
+            # Start the startup logger as a background task
+            asyncio.create_task(startup_logger())
+
+            # Run the server (this blocks)
+            await app.run_http_async(host=config.host, port=config.port)
+
+        asyncio.run(run_server())
     except KeyboardInterrupt:
         print("\n🛑 Shutting down MCP Server Foundation")
         sys.exit(0)

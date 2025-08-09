@@ -36,7 +36,7 @@ class HealthCheckManager:
         self._register_signal_handlers()
 
         # Mark as ready after initialization (deferred to avoid event loop issues)
-        self._ready_task = None
+        self._ready_task: asyncio.Task[None] | None = None
 
     async def start(self) -> None:
         """Start the health check manager (called when event loop is running)."""
@@ -54,7 +54,7 @@ class HealthCheckManager:
         signal.signal(signal.SIGTERM, self._handle_shutdown)
         signal.signal(signal.SIGINT, self._handle_shutdown)
 
-    def _handle_shutdown(self, signum: int, frame: Any) -> None:
+    def _handle_shutdown(self, signum: int, frame: Any) -> None:  # noqa: ARG002
         """Handle shutdown signals gracefully.
 
         Args:
@@ -179,7 +179,7 @@ def register_health_endpoints(
     manager = HealthCheckManager(app, config)
 
     # Register health check as a tool that can be called via HTTP
-    @app.tool
+    @app.tool  # type: ignore[misc]
     async def health() -> dict[str, Any]:
         """Health check endpoint for Docker/Kubernetes.
 
@@ -188,7 +188,7 @@ def register_health_endpoints(
         """
         return await manager.health_check()
 
-    @app.tool
+    @app.tool  # type: ignore[misc]
     async def readiness() -> dict[str, Any]:
         """Readiness check endpoint for load balancers.
 
@@ -197,7 +197,7 @@ def register_health_endpoints(
         """
         return await manager.readiness_check()
 
-    @app.tool
+    @app.tool  # type: ignore[misc]
     async def liveness() -> dict[str, Any]:
         """Liveness check endpoint to detect hung processes.
 

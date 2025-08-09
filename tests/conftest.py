@@ -12,6 +12,11 @@ from fastmcp import FastMCP
 from mcp_server.config import DeploymentMode, MCPServerConfig
 from mcp_server.main import MCPServerFoundation, create_app
 
+# Test constants to avoid hardcoded secrets in tests
+TEST_SECRET_KEY = "test-secret-key-for-testing-only"  # noqa: S105
+PRODUCTION_TEST_SECRET_KEY = "production-test-secret-key"  # noqa: S105
+INTEGRATION_TEST_SECRET_KEY = "integration-test-secret"  # noqa: S105
+
 
 @pytest.fixture(scope="session")
 def temp_dir() -> Generator[Path]:
@@ -31,7 +36,7 @@ def test_config(temp_dir: Path) -> MCPServerConfig:
         database_url=f"sqlite:///{temp_dir}/test.db",
         storage_path=str(temp_dir / "storage"),
         log_level="DEBUG",
-        secret_key="test-secret-key-for-testing-only",
+        secret_key=TEST_SECRET_KEY,
     )
 
 
@@ -41,13 +46,13 @@ def production_test_config(temp_dir: Path) -> MCPServerConfig:
     return MCPServerConfig(
         deployment_mode=DeploymentMode.PRODUCTION,
         debug=False,
-        host="0.0.0.0",
+        host="127.0.0.1",  # Use localhost instead of binding to all interfaces in tests
         port=8000,
         database_url="postgresql://test:test@localhost:5432/test",
         storage_backend="local",
         storage_path=str(temp_dir / "production_storage"),
         log_level="INFO",
-        secret_key="production-test-secret-key",
+        secret_key=PRODUCTION_TEST_SECRET_KEY,
         redis_url="redis://localhost:6379",
     )
 

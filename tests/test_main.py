@@ -8,11 +8,13 @@ from fastmcp import FastMCP
 
 from mcp_server.config import DeploymentMode, MCPServerConfig, StorageBackend
 from mcp_server.main import HealthResponse, MCPServerFoundation, create_app, main
+from tests.conftest import TEST_SECRET_KEY
 
 
 class TestHealthResponse:
     """Test the HealthResponse model."""
 
+    @pytest.mark.unit
     def test_health_response_creation(self):
         """Test creating a health response."""
         response = HealthResponse(
@@ -31,6 +33,7 @@ class TestHealthResponse:
 class TestMCPServerFoundation:
     """Test the MCPServerFoundation class."""
 
+    @pytest.mark.unit
     def test_init_with_config(self, test_config):
         """Test initialization with provided config."""
         server = MCPServerFoundation(test_config)  # noqa: F841
@@ -39,6 +42,7 @@ class TestMCPServerFoundation:
         assert isinstance(server.app, FastMCP)
         assert server.app.name == test_config.server_name
 
+    @pytest.mark.unit
     def test_init_without_config(self):
         """Test initialization without config (loads from environment)."""
         with patch("mcp_server.main.get_config") as mock_get_config:
@@ -55,6 +59,7 @@ class TestMCPServerFoundation:
             assert isinstance(server.app, FastMCP)
             mock_get_config.assert_called_once()
 
+    @pytest.mark.unit
     def test_setup_development_mode(self, test_config, temp_dir):
         """Test development mode setup."""
         test_config.deployment_mode = DeploymentMode.DEVELOPMENT
@@ -74,6 +79,7 @@ class TestMCPServerFoundation:
             Path("./data").iterdir()
         ) else None
 
+    @pytest.mark.unit
     def test_setup_production_mode(self, production_test_config):
         """Test production mode setup."""
         server = MCPServerFoundation(production_test_config)
@@ -83,6 +89,7 @@ class TestMCPServerFoundation:
         assert not server.config.is_development
         assert server.config.is_production
 
+    @pytest.mark.unit
     def test_get_fastmcp_app(self, test_config):
         """Test getting the FastMCP app instance."""
         server = MCPServerFoundation(test_config)  # noqa: F841
@@ -123,6 +130,7 @@ class TestMCPServerFoundation:
 class TestCreateApp:
     """Test the create_app function."""
 
+    @pytest.mark.unit
     def test_create_app_with_config(self, test_config):
         """Test creating app with provided config."""
         app = create_app(test_config)
@@ -130,6 +138,7 @@ class TestCreateApp:
         assert isinstance(app, FastMCP)
         assert app.name == test_config.server_name
 
+    @pytest.mark.unit
     def test_create_app_without_config(self):
         """Test creating app without config."""
         with patch("mcp_server.main.get_config") as mock_get_config:
@@ -145,6 +154,7 @@ class TestCreateApp:
             assert isinstance(app, FastMCP)
             mock_get_config.assert_called_once()
 
+    @pytest.mark.unit
     def test_create_app_development_mode(self, test_config):
         """Test creating app in development mode."""
         test_config.deployment_mode = DeploymentMode.DEVELOPMENT
@@ -154,6 +164,7 @@ class TestCreateApp:
         assert isinstance(app, FastMCP)
         assert app.name == test_config.server_name
 
+    @pytest.mark.unit
     def test_create_app_production_mode(self, production_test_config):
         """Test creating app in production mode."""
         app = create_app(production_test_config)
@@ -167,6 +178,7 @@ class TestMain:
 
     @patch("mcp_server.main.create_app")
     @patch("asyncio.run")
+    @pytest.mark.unit
     def test_main_function(self, mock_asyncio_run, mock_create_app):
         """Test the main function execution."""
         # Mock the FastMCP app
@@ -196,6 +208,7 @@ class TestMain:
         assert hasattr(call_args[0], "__await__") or callable(call_args[0])
 
     @patch("mcp_server.main.create_app")
+    @pytest.mark.unit
     def test_main_function_integration(self, mock_create_app):
         """Test main function with actual config."""
         # Create a real config for testing
@@ -211,23 +224,26 @@ class TestMain:
         mock_app.run_http_async = AsyncMock()
         mock_create_app.return_value = mock_app
 
-        with patch("mcp_server.main.get_config", return_value=test_config):
-            with patch("asyncio.run") as mock_run:
-                main()
+        with (
+            patch("mcp_server.main.get_config", return_value=test_config),
+            patch("asyncio.run") as mock_run,
+        ):
+            main()
 
-                # Verify the app was created with the config
-                mock_create_app.assert_called_once_with(test_config)
+            # Verify the app was created with the config
+            mock_create_app.assert_called_once_with(test_config)
 
-                # Verify asyncio.run was called with a coroutine
-                mock_run.assert_called_once()
-                args = mock_run.call_args[0]
-                assert len(args) == 1
-                assert hasattr(args[0], "__await__")  # It's a coroutine
+            # Verify asyncio.run was called with a coroutine
+            mock_run.assert_called_once()
+            args = mock_run.call_args[0]
+            assert len(args) == 1
+            assert hasattr(args[0], "__await__")  # It's a coroutine
 
 
 class TestServerIntegration:
     """Integration tests for server components."""
 
+    @pytest.mark.unit
     def test_server_initialization_flow(self, test_config):
         """Test the complete server initialization flow."""
         # Test that all components work together
@@ -250,6 +266,7 @@ class TestServerIntegration:
         app = server.get_fastmcp_app()
         assert app is server.app
 
+    @pytest.mark.unit
     def test_different_storage_backends(self, temp_dir):
         """Test server initialization with different storage backends."""
         storage_backends = [
@@ -271,6 +288,7 @@ class TestServerIntegration:
             assert server.config.storage_backend == backend
             assert isinstance(server.app, FastMCP)
 
+    @pytest.mark.unit
     def test_deployment_mode_transitions(self, temp_dir):
         """Test server behavior with different deployment modes."""
         modes = [
@@ -284,7 +302,7 @@ class TestServerIntegration:
             config = MCPServerConfig(
                 deployment_mode=mode,
                 storage_path=str(temp_dir / f"storage_{mode}"),
-                secret_key="test-secret-key",
+                secret_key=TEST_SECRET_KEY,
             )
 
             # Should initialize without errors for all modes
