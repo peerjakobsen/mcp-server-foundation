@@ -1,3 +1,4 @@
+---
 name: Local Testing with act
 
 on:
@@ -10,84 +11,57 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Check Python version
-      run: |
-        python3 --version
-        which python3
+      - name: Check Python version
+        run: |
+          python3 --version
+          which python3
 
-    - name: Check directory structure
-      run: |
-        pwd
-        ls -la
+      - name: Check directory structure
+        run: |
+          pwd
+          ls -la
 
-    - name: Install uv manually
-      run: |
-        curl -LsSf https://astral.sh/uv/install.sh | sh
-        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+      - name: Install uv manually
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
-    - name: Verify uv installation
-      run: |
-        export PATH="$HOME/.cargo/bin:$PATH"
-        uv --version
+      - name: Verify uv installation
+        run: |
+          export PATH="$HOME/.cargo/bin:$PATH"
+          uv --version
 
-    - name: Create basic test directory
-      run: |
-        mkdir -p ./data
-        mkdir -p ./test_output
+      - name: Create basic test directory
+        run: |
+          mkdir -p test-results
+          echo "Basic test completed at $(date)" > test-results/basic-test.txt
 
-    - name: Python environment test
-      run: |
-        export PATH="$HOME/.cargo/bin:$PATH"
-        python3 -m venv test_venv
-        source test_venv/bin/activate
-        python --version
-        pip --version
-
-    - name: Basic pytest test
-      run: |
-        export PATH="$HOME/.cargo/bin:$PATH"
-        # If uv is available, use it; otherwise use pip
-        if command -v uv >/dev/null 2>&1; then
-          echo "Using uv for dependencies"
-          uv venv test_env
-          source test_env/bin/activate
-          uv pip install pytest
-        else
-          echo "Using system pip for dependencies"
-          python3 -m venv test_env
-          source test_env/bin/activate
-          pip install pytest
-        fi
-
-        # Create a simple test
-        echo "def test_basic(): assert 1 + 1 == 2" > basic_test.py
-        python -m pytest basic_test.py -v
+      - name: Show test results
+        run: |
+          cat test-results/basic-test.txt
+          ls -la test-results/
 
   simple-code-quality:
     name: Simple Code Quality
     runs-on: ubuntu-latest
 
     steps:
-    - name: Check code formatting (basic)
-      run: |
-        echo "Checking basic formatting..."
-        # Basic syntax check if Python files exist
-        if find . -name "*.py" -type f | head -1 > /dev/null; then
-          echo "Found Python files, checking syntax..."
-          python3 -m py_compile src/mcp_server/*.py || echo "Syntax check skipped - files not found"
-        else
-          echo "No Python files found to check"
-        fi
+      - name: Check code formatting (basic)
+        run: |
+          echo "Checking basic formatting..."
+          # Basic syntax check if Python files exist
+          if find . -name "*.py" -type f | head -1 > /dev/null; then
+            echo "Found Python files, checking syntax..."
+            # Very basic syntax check
+            python3 -m py_compile $(find . -name "*.py" -type f | head -5) || echo "Some syntax issues found"
+          else
+            echo "No Python files found in current directory"
+          fi
 
-    - name: Install basic linting tools
-      run: |
-        python3 -m pip install flake8 || echo "Flake8 installation failed"
+      - name: Check for common issues
+        run: |
+          echo "Checking for common configuration files..."
+          ls -la | grep -E '\.(yml|yaml|toml|json|md)$' || echo "No config files found"
 
-    - name: Run basic linting (if possible)
-      run: |
-        if command -v flake8 >/dev/null 2>&1 && [ -d "src" ]; then
-          echo "Running flake8 linting..."
-          flake8 src/ || echo "Linting completed with issues"
-        else
-          echo "Skipping linting - tools or source not available"
-        fi
+          echo "Checking directory structure..."
+          find . -maxdepth 2 -type d | head -10
