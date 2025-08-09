@@ -203,6 +203,12 @@ uv run mcp-server
 - **Transport**: Streamable-HTTP (supports Server-Sent Events)
 - **Testing**: Requires proper MCP clients, not raw curl commands
 
+### MyPy Type Safety Guidelines
+- Always annotate function parameters and return types: `def func(param: str) -> dict[str, Any]:`
+- Use `# type: ignore[misc]` for FastMCP decorators: `@self.app.tool  # type: ignore[misc]`
+- Pydantic validators need `ValidationInfo`: `def validator(cls, v: Any, info: ValidationInfo) -> Any:`
+- Run `uv run mypy src/` before commits to ensure type safety
+
 ### Pydantic v2 Configuration Fixes
 ```python
 # Fix imports in config.py
