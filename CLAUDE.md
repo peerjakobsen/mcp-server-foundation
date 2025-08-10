@@ -103,6 +103,20 @@ All configuration flows through `MCPServerConfig` in `src/mcp_server/config.py`.
 - Debug/reload flags automatically set for development modes
 - Storage backends switch between local filesystem and cloud providers
 
+### Configuration Separation
+The project maintains strict separation between server configuration and CI/CD tooling:
+
+**Server Configuration** (`.env` and `.env.example`):
+- Only contains variables needed by the MCP server runtime
+- Loaded by `MCPServerConfig` for application behavior
+- Safe to commit `.env.example` with placeholder values
+
+**CI/CD Configuration** (GitHub Actions secrets only):
+- `SAFETY_API_KEY`: Used only for security scanning in GitHub Actions
+- Set via `${{ secrets.SAFETY_API_KEY }}` in workflow files
+- Never stored in `.env` files for security and separation of concerns
+- Local developers can use Safety CLI in free mode without the API key
+
 ### Configuration Priority
 1. Environment variables
 2. `.env` files

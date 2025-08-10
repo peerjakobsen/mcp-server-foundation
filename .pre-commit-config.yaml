@@ -48,7 +48,7 @@ repos:
         pass_filenames: false
       - id: safety-check
         name: safety vulnerability scan
-        entry: uv run safety --stage cicd scan --output json --short-report
+        entry: uv run safety scan --output json --short-report
         language: system
         pass_filenames: false
 
